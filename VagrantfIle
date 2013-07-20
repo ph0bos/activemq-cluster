@@ -1,0 +1,43 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "centos64"
+
+  config.hostmanager.enabled = true
+  config.hostmanager.ignore_private_ip = false
+  config.hostmanager.include_offline = true
+  
+  1.upto(1) do |index|
+    config.vm.define "activemq-#{index}" do |activemq_config|
+      ip_address = "192.168.50.#{3+index}"
+      
+      activemq_config.vm.hostname = "activemq-#{index}"
+      
+      activemq_config.vm.network :private_network, :ip => ip_address
+      activemq_config.vm.network :forwarded_port, guest: 8161, host: 8161
+      activemq_config.vm.network :forwarded_port, guest: 61616, host: 61616
+
+      activemq_config.vm.provision :shell, :inline => "sudo service iptables stop"
+
+      activemq_config.vm.provision :chef_solo do |chef|
+        chef.add_recipe "yum"
+        chef.add_recipe "activemq"
+        chef.log_level = :info
+        chef.json = {
+          'activemq' => {
+            'config' => {
+              'name' => "activemq-#{index}",
+              'data_path' => '/vagrant',
+              'connect_address' => ip_address,
+              'multicast' => {
+                'group' => "amq"
+              }
+            }
+          } 
+        }
+      end      
+    end
+  end
+  
+end

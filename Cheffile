@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+#^syntax detection
+
+site 'http://community.opscode.com/api/v1'
+cookbook 'apt'
+cookbook 'build-essential'
+
+cookbook 'yum', :git => 'git://github.com/cookbooks/yum.git'
+cookbook 'java', :git => 'git://github.com/opscode-cookbooks/java.git'
+cookbook 'ark', :git => 'git://github.com/opscode-cookbooks/ark.git'
+cookbook 'maven', :git => 'git://github.com/opscode-cookbooks/maven.git'
+cookbook 'tomcat', :git => 'git://github.com/bryanwb/chef-tomcat.git'
+cookbook 'activemq', :path => 'vendor/cookbooks/activemq_cookbook'
+cookbook 'zookeeper', :git => 'git://github.com/SimpleFinance/chef-zookeeper.git'

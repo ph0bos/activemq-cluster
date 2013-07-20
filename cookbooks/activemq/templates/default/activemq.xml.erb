@@ -1,0 +1,116 @@
+<beans
+  xmlns="http://www.springframework.org/schema/beans"
+  xmlns:amq="http://activemq.apache.org/schema/core"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+  http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+  http://activemq.apache.org/camel/schema/spring http://activemq.apache.org/camel/schema/spring/camel-spring.xsd">
+
+<% if @webconsole -%>
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+          <value>file:${activemq.conf}/credentials.properties</value>
+        </property>
+    </bean>
+<% end -%>
+
+    <broker xmlns="http://activemq.apache.org/schema/core" brokerName="<%= @config['name'] %>" useJmx="true">
+    
+        <!-- Destination specific policies using destination names or wildcards -->
+        <destinationPolicy>
+            <policyMap>
+                <policyEntries>
+                    <policyEntry queue=">" producerFlowControl="true" memoryLimit="20mb">
+                        <deadLetterStrategy>
+                          <individualDeadLetterStrategy queuePrefix="DLQ." useQueueForQueueMessages="true" />
+                        </deadLetterStrategy>
+                    </policyEntry>
+                    <policyEntry topic=">" producerFlowControl="true" memoryLimit="20mb">
+                    </policyEntry>
+                </policyEntries>
+            </policyMap>
+        </destinationPolicy>
+
+        <!-- Use the following to configure how ActiveMQ is exposed in JMX -->
+        <managementContext>
+            <managementContext createConnector="true"/>
+        </managementContext>
+
+        <!-- <plugins>
+          <statisticsBrokerPlugin/>
+          <simpleAuthenticationPlugin>
+            <users>
+<% unless @config['username'].nil? || @config['password'].nil? -%>
+              <authenticationUser username="<%= @config['username'] %>" password="<%= @config['password'] %>" groups="everyone"/>
+<% end -%>
+              <authenticationUser username="<%= @config['admin_username'] %>" password="<%= @config['admin_password'] %>" groups="admin,everyone"/>
+            </users>
+          </simpleAuthenticationPlugin>
+          <authorizationPlugin>
+            <map>
+              <authorizationMap>
+                <authorizationEntries>
+                  <authorizationEntry queue=">" write="admins" read="admins" admin="admins" />
+                  <authorizationEntry topic=">" write="admins" read="admins" admin="admins" />
+                  <authorizationEntry topic="ActiveMQ.Advisory.>" read="everyone" write="everyone" admin="everyone"/>
+                </authorizationEntries>
+              </authorizationMap>
+            </map>
+          </authorizationPlugin>
+        </plugins> -->
+
+        <!--
+            Configure network connector to use multicast protocol
+            For more information, see
+
+            http://activemq.apache.org/multicast-transport-reference.html
+        -->
+        <networkConnectors>
+          <networkConnector uri="multicast://default<%= @multicast_parameters %>"
+            dynamicOnly="true"
+            networkTTL="3"
+            prefetchSize="1"
+            decreaseNetworkConsumerPriority="true" />
+        </networkConnectors>
+
+        <persistenceAdapter>
+          <!-- <memoryPersistenceAdapter/> -->
+          <kahaDB directory="<%= @config['data_path'] %>/kahadb"/>
+          <!-- <levelDB directory="<%= @config['data_path'] %>/leveldb"/> -->
+        </persistenceAdapter>
+
+        <systemUsage>
+            <systemUsage>
+                <memoryUsage>
+                    <memoryUsage limit="20 mb"/>
+                </memoryUsage>
+                <storeUsage>
+                    <storeUsage limit="1 gb" name="foo"/>
+                </storeUsage>
+                <tempUsage>
+                    <tempUsage limit="100 mb"/>
+                </tempUsage>
+            </systemUsage>
+        </systemUsage>
+
+        <!--
+            The transport connectors ActiveMQ will listen to
+            Configure discovery URI to use multicast protocol
+        -->
+        <transportConnectors>
+          <transportConnector name="openwire" 
+            uri="tcp://<%= @config['connect_address'] %>:61616" 
+            discoveryUri="multicast://default<%= @multicast_parameters %>"/>
+        </transportConnectors>
+        
+        <!-- destroy the spring context on shutdown to stop jetty -->
+        <shutdownHooks>
+            <bean xmlns="http://www.springframework.org/schema/beans" class="org.apache.activemq.hooks.SpringContextHook" />
+        </shutdownHooks>
+        
+    </broker>
+
+<% if @webconsole -%>
+      <import resource="jetty.xml"/>
+<% end -%>
+</beans>
